@@ -6,19 +6,19 @@ from ollama import ChatResponse
 def send_parallel(models, message):
     responses = []
     for model in models:
-        responses.append(
-            chat(
-                model=model,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": message,
-                    },
-                ],
-            )
+        response = chat(
+            model=model,
+            messages=[
+                {
+                    "role": "user",
+                    "content": message,
+                },
+            ],
         )
+        responses.append((model, response["message"]["content"]))
 
-    return [response["message"]["content"] for response in responses]
+    formatted_responses = "\n".join([f"{model}: {response}" for model, response in responses])
+    return formatted_responses
 
 
 if __name__ == "__main__":
