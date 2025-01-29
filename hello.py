@@ -1,6 +1,15 @@
 import sys
-from ollama import chat
-from ollama import ChatResponse
+import argparse
+from ollama import chat, ChatResponse
+
+
+def parse_models():
+    parser = argparse.ArgumentParser(description='Send message to multiple models')
+    parser.add_argument('--model', nargs='+',
+                       help='One or more model names to send the message to',
+                       required=True)
+    args = parser.parse_args()
+    return args.model
 
 
 def send_parallel(models, message):
@@ -24,5 +33,6 @@ def send_parallel(models, message):
 
 
 if __name__ == "__main__":
-    message = sys.argv[1]
-    print(send_parallel(["llama3", "deepseek-r1:1.5b"], message))
+    models = parse_models()
+    message = sys.argv[2] if len(sys.argv) > 2 else "Hello"
+    print(send_parallel(models, message))
