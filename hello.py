@@ -8,8 +8,11 @@ def parse_models():
     parser.add_argument('--model', nargs='+',
                        help='One or more model names to send the message to',
                        required=True)
+    parser.add_argument('message',
+                       help='The message to send to the models',
+                       required=True)
     args = parser.parse_args()
-    return args.model
+    return args.model, args.message
 
 
 def send_parallel(models, message):
@@ -33,6 +36,5 @@ def send_parallel(models, message):
 
 
 if __name__ == "__main__":
-    models = parse_models()
-    message = sys.argv[2] if len(sys.argv) > 2 else "Hello"
+    models, message = parse_models()
     print(send_parallel(models, message))
