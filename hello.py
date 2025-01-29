@@ -17,7 +17,9 @@ def send_parallel(models, message):
         )
         responses.append((model, response["message"]["content"]))
 
-    formatted_responses = "\n".join([f"{model}: {response}" for model, response in responses])
+    formatted_responses = "\n\n=========\n\n".join(
+        [f"{model}: \n{response}" for model, response in responses]
+    )
     return formatted_responses
 
 
