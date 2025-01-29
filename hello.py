@@ -1,16 +1,16 @@
-import sys
 import argparse
 from ollama import chat, ChatResponse
 
 
 def parse_models():
-    parser = argparse.ArgumentParser(description='Send message to multiple models')
-    parser.add_argument('--model', nargs='+',
-                       help='One or more model names to send the message to',
-                       required=True)
-    parser.add_argument('message',
-                       help='The message to send to the models',
-                       required=True)
+    parser = argparse.ArgumentParser(description="Send message to multiple models")
+    parser.add_argument(
+        "--model",
+        nargs="+",
+        help="One or more model names to send the message to",
+        required=True,
+    )
+    parser.add_argument("message", help="The message to send to the models")
     args = parser.parse_args()
     return args.model, args.message
 
