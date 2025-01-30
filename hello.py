@@ -1,5 +1,9 @@
 import argparse
-from ollama import chat, ChatResponse
+from ollama import chat
+from rich import print
+from rich.columns import Columns
+from rich.panel import Panel
+from rich.console import Console
 
 
 def parse_models():
@@ -15,26 +19,29 @@ def parse_models():
     return args.model, args.message
 
 
-def send_parallel(models, message):
+def print_columns(responses):
+    console = Console()
+    responses = [Panel(res[1], title=res[0]) for res in responses]
+    cols = Columns(
+        responses, equal=True, width=(console.size.width // len(responses) - 2)
+    )
+    print(cols)
+
+
+def main(models, message):
     responses = []
     for model in models:
-        response = chat(
-            model=model,
-            messages=[
-                {
-                    "role": "user",
-                    "content": message,
-                },
-            ],
-        )
-        responses.append((model, response["message"]["content"]))
+        try:
+            response = chat(
+                model=model, messages=[{"role": "user", "content": message}]
+            )
+            responses.append((model, response["message"]["content"]))
+        except Exception as e:
+            responses.append((model, str(e)))
 
-    formatted_responses = "\n\n=========\n\n".join(
-        [f"{model}: \n{response}" for model, response in responses]
-    )
-    return formatted_responses
+    print_columns(responses)
 
 
 if __name__ == "__main__":
     models, message = parse_models()
-    print(send_parallel(models, message))
+    main(models, message)
