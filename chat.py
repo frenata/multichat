@@ -1,8 +1,10 @@
-import collections
+import random
+import os
 import argparse
 from ollama import chat, Message
 from rich import print
 from rich.prompt import Prompt
+from rich.live import Live
 from rich.columns import Columns
 from rich.panel import Panel
 from rich.console import Console
@@ -20,30 +22,38 @@ def parse_models():
     return args.model
 
 
-def print_chats(chats):
+def prep_panels(chats):
     console = Console()
-    responses = [
-        Panel(messages[-1].content, title=model) for model, messages in chats.items()
+    panels = [
+        Panel("...", title=model, style=f"color({hash(model) % 240})")
+        for model in chats
     ]
-    cols = Columns(
-        responses, equal=True, width=(console.size.width // len(responses) - 2)
-    )
-    print(cols)
+    cols = Columns(panels, equal=True, width=(console.size.width // len(panels) - 2))
+    return Live(Panel(cols)), panels
 
 
 def interactive(models):
-    messages = collections.defaultdict(list)
+    chats = {model: [] for model in models}
 
     while True:
         message = str(Prompt.ask(">> "))
-        for model in models:
+        if message in ["exit", "quit", "q", "x"]:
+            exit(0)
+        live, panels = prep_panels(chats)
+        live.start()
+        for i, model in enumerate(models):
             user_message = Message(role="user", content=message)
-            messages[model].append(user_message)
-            model_message: dict = chat(model=model, messages=messages[model])
-            messages[model].append(model_message.message)
-        print_chats(messages)
+            chats[model].append(user_message)
+            model_message: dict = chat(model=model, messages=chats[model])
+            chats[model].append(model_message.message)
+            panels[i].renderable = model_message.message.content
+        live.stop()
 
 
 if __name__ == "__main__":
+    if os.getenv("OLLAMA_API_BASE", None) is None:
+        print("Please set OLLAMA_API_BASE to connect to Ollama.")
+        exit(1)
+
     models = parse_models()
     interactive(models)
