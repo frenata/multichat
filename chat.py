@@ -1,5 +1,4 @@
 import asyncio
-import random
 import os
 import argparse
 from ollama import chat, Message, AsyncClient
