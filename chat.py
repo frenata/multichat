@@ -23,44 +23,48 @@ def parse_models():
     return args.model
 
 
-def prep_panels(chats):
-    console = Console()
-    panels = [
-        Panel("...", title=model, style=f"color({hash(model) % 240})")
-        for model in chats
-    ]
-    cols = Columns(panels, equal=True, width=((console.size.width - 10) // len(panels)))
-    return Live(Panel(cols)), panels
+class Session:
+    def __init__(self, models):
+        self.models = models
+        self.client = AsyncClient()
 
+    def prep_panels(self):
+        console = Console()
+        panels = [
+            Panel("...", title=model, style=f"color({hash(model) % 240})")
+            for model in self.models
+        ]
+        cols = Columns(
+            panels, equal=True, width=((console.size.width - 10) // len(panels))
+        )
+        return Live(Panel(cols)), panels
 
-client = AsyncClient()
-
-
-async def chat_with_model(model, message, prior_messages, panel, barrier):
-    user_message = Message(role="user", content=message)
-    prior_messages.append(user_message)
-    model_message: dict = await client.chat(model=model, messages=prior_messages)
-    prior_messages.append(model_message.message)
-    panel.renderable = model_message.message.content
-    await barrier.wait()
-
-
-async def interactive(models):
-    chats = {model: [] for model in models}
-    barrier = asyncio.Barrier(len(models) + 1)
-
-    while True:
-        message = str(Prompt.ask(">> "))
-        if message in ["exit", "quit", "q", "x"]:
-            exit(0)
-        live, panels = prep_panels(chats)
-        live.start()
-        for i, model in enumerate(models):
-            asyncio.create_task(
-                chat_with_model(model, message, chats[model], panels[i], barrier)
-            )
+    async def chat_with_model(self, model, message, panel, barrier):
+        user_message = Message(role="user", content=message)
+        self.chats[model].append(user_message)
+        model_message: dict = await self.client.chat(
+            model=model, messages=self.chats[model]
+        )
+        self.chats[model].append(model_message.message)
+        panel.renderable = model_message.message.content
         await barrier.wait()
-        live.stop()
+
+    async def interactive(self):
+        self.chats = {model: [] for model in self.models}
+        barrier = asyncio.Barrier(len(self.models) + 1)
+
+        while True:
+            message = str(Prompt.ask(">> "))
+            if message in ["exit", "quit", "q", "x"]:
+                exit(0)
+            live, panels = self.prep_panels()
+            live.start()
+            for i, model in enumerate(self.models):
+                asyncio.create_task(
+                    self.chat_with_model(model, message, panels[i], barrier)
+                )
+            await barrier.wait()
+            live.stop()
 
 
 if __name__ == "__main__":
@@ -68,5 +72,4 @@ if __name__ == "__main__":
         print("Please set OLLAMA_API_BASE to connect to Ollama.")
         exit(1)
 
-    models = parse_models()
-    asyncio.run(interactive(models))
+    asyncio.run(Session(parse_models()).interactive())
