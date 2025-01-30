@@ -1,7 +1,8 @@
+import asyncio
 import random
 import os
 import argparse
-from ollama import chat, Message
+from ollama import chat, Message, AsyncClient
 from rich import print
 from rich.prompt import Prompt
 from rich.live import Live
@@ -28,12 +29,25 @@ def prep_panels(chats):
         Panel("...", title=model, style=f"color({hash(model) % 240})")
         for model in chats
     ]
-    cols = Columns(panels, equal=True, width=(console.size.width // len(panels) - 2))
+    cols = Columns(panels, equal=True, width=((console.size.width - 10) // len(panels)))
     return Live(Panel(cols)), panels
 
 
-def interactive(models):
+client = AsyncClient()
+
+
+async def chat_with_model(model, message, prior_messages, panel, barrier):
+    user_message = Message(role="user", content=message)
+    prior_messages.append(user_message)
+    model_message: dict = await client.chat(model=model, messages=prior_messages)
+    prior_messages.append(model_message.message)
+    panel.renderable = model_message.message.content
+    await barrier.wait()
+
+
+async def interactive(models):
     chats = {model: [] for model in models}
+    barrier = asyncio.Barrier(len(models) + 1)
 
     while True:
         message = str(Prompt.ask(">> "))
@@ -42,11 +56,10 @@ def interactive(models):
         live, panels = prep_panels(chats)
         live.start()
         for i, model in enumerate(models):
-            user_message = Message(role="user", content=message)
-            chats[model].append(user_message)
-            model_message: dict = chat(model=model, messages=chats[model])
-            chats[model].append(model_message.message)
-            panels[i].renderable = model_message.message.content
+            asyncio.create_task(
+                chat_with_model(model, message, chats[model], panels[i], barrier)
+            )
+        await barrier.wait()
         live.stop()
 
 
@@ -56,4 +69,4 @@ if __name__ == "__main__":
         exit(1)
 
     models = parse_models()
-    interactive(models)
+    asyncio.run(interactive(models))
