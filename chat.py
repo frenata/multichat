@@ -14,7 +14,9 @@ def parse_models():
         help="One or more model names to send the message to",
         required=True,
     )
-    parser.add_argument("message", help="The message to send to the models")
+    parser.add_argument(
+        "--message", required=True, help="The message to send to the models"
+    )
     args = parser.parse_args()
     return args.model, args.message
 
